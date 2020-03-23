@@ -214,12 +214,15 @@ ts_conf_gathered <- ts_conf_gathered %>%
 
 #plot daily cases by country
 ggplot() +
-    geom_col(data=filter(ts_conf_gathered, Country.Region %in% c("Austria")), aes(x=date, y=daily, group=Country.Region))
-
-ggplot() +
     geom_line(data=filter(ts_conf_gathered, Country.Region %in% c("UK", "Austria", "Germany", "Italy", "Spain")), aes(x=date, y=daily, group=Country.Region, colour=Country.Region))
 ```
 
+```{r}
+ggplot() +
+    geom_col(data=filter(ts_conf_gathered, Country.Region %in% c("Austria", "UK", "Italy", "Korea, South")), aes(x=date, y=daily, group=Country.Region, fill=Country.Region), position = "dodge") +
+  scale_x_date(limits = c(as.Date("2020-02-18"), as.Date("2020-03-15"))) +
+  coord_cartesian(ylim=c(0, 1000)) #for a true zoom without throwing away data that is out of bounds as when using limits in y_scale_continous
+```
 
 
 
