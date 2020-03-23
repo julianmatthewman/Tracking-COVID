@@ -1,0 +1,200 @@
+---
+title: "COVID"
+output: html_notebook
+---
+```{r}
+library(tidyverse)
+library(lubridate)
+theme_set(theme_bw())
+```
+
+
+```{r}
+library(RColorBrewer)
+n <- 60
+qual_col_pals = brewer.pal.info[brewer.pal.info$category == 'qual',]
+col_vector = unlist(mapply(brewer.pal, qual_col_pals$maxcolors, rownames(qual_col_pals)))
+pie(rep(1,n), col=sample(col_vector, n))
+```
+
+
+```{r}
+#Daily reports
+setwd("/Users/Julian/Dropbox/Documents/GitHub/COVID-19/csse_covid_19_data/csse_covid_19_daily_reports")
+temp = list.files(pattern="*.csv")
+myfiles = lapply(temp, read.csv)
+
+#Time series
+setwd("/Users/Julian/Dropbox/Documents/GitHub/COVID-19/csse_covid_19_data/csse_covid_19_time_series")
+ts_conf <- read.csv("time_series_19-covid-Confirmed.csv")
+ts_deaths <- read.csv("time_series_19-covid-Deaths.csv")
+ts_recovered <- read.csv("time_series_19-covid-Recovered.csv")
+ts_conf_global <- read.csv("time_series_covid19_confirmed_global.csv")
+ts_conf_global <- read.csv("time_series_covid19_deaths_global.csv")
+```
+
+
+```{r}
+#make one big dataframe
+all <- map_dfr(myfiles, as.data.frame)
+
+#set date
+all <- all %>% mutate(date=as_date(Last.Update))
+all[is.na(all$date),] <- all[is.na(all$date),] %>% mutate(date=as_date(mdy_hm(Last.Update)))
+
+
+#remove duplicates
+all <- all %>% group_by(Country.Region) %>% distinct(date, .keep_all = T)
+
+#duplicate/different names of countries
+#iran
+all$Country.Region[all$Country.Region=="Iran (Islamic Republic of)"] <- "Iran"
+#south korea
+all$Country.Region[all$Country.Region=="Korea, South"] <- "South Korea"
+#china
+all$Country.Region[all$Country.Region=="Mainland China"] <- "China"
+#UK
+all$Country.Region[all$Country.Region=="United Kingdom" & all$Province.State=="United Kingdom"] <- "UK"
+#South Korea
+all$Country.Region[all$Country.Region=="Republic of Korea"] <- "South Korea"
+
+```
+
+
+```{r}
+#All
+ggplot(all, aes(x=date, y=Confirmed, group=Province.State)) +
+    geom_line()
+```
+
+
+```{r}
+#Just Hubei
+filter(all, Province.State=="Hubei") %>% 
+    ggplot(aes(x=date, y=Confirmed, group=Province.State, color=Province.State)) +
+    geom_line()
+```
+
+
+```{r}
+#US States >100 confirmed
+filter(all, Country.Region=="US" & Confirmed>10) %>% 
+    ggplot(aes(x=date, y=Confirmed, group=Province.State, color=Province.State)) +
+    geom_line()
+```
+
+
+```{r}
+#without china for province .state
+filter(all, Country.Region!="Mainland China" & Country.Region!="China") %>% 
+    ggplot(aes(x=date, y=Confirmed, group=Country.Region)) +
+    geom_line()
+```
+
+
+```{r}
+#without china for country.region log scale
+filter(all, Country.Region!="China" & Province.State=="" & date>"2020-2-25" & Confirmed>400) %>% 
+    ggplot(aes(x=date, y=Confirmed, group=Country.Region, colour=Country.Region)) +
+    geom_line() +
+    scale_y_log10()
+
+#without china for country.region regular scale
+filter(all, Country.Region!="China" & Province.State=="" & date>"2020-2-25" & Confirmed>400) %>% 
+    ggplot(aes(x=date, y=Confirmed, group=Country.Region, colour=Country.Region)) +
+    geom_line()
+```
+
+```{r}
+#Make list of countries that have more than 500 cases
+high <- unique(all$Country.Region[all$Confirmed>800])[is.na(unique(all$Country.Region[all$Confirmed>800]))==F]
+
+#filter by countires
+#austria
+austria <- filter(all, Country.Region == "Austria")
+```
+
+
+```{r}
+##from the list of countries with more than 500 cases
+#all countries from the high list
+filter(all, Country.Region %in% high & Confirmed>0) %>% 
+    ggplot(aes(x=date, y=Confirmed, group=Country.Region, colour=Country.Region)) +
+    geom_line()
+
+#without china
+filter(all, Country.Region %in% high & Confirmed>20 & Country.Region!="China" & date>"2020-2-25") %>% 
+    ggplot(aes(x=date, y=Confirmed, group=Country.Region, colour=Country.Region)) +
+    geom_line() +
+    scale_y_continuous(limits = c(0, 10000)) +
+    scale_color_manual(values=col_vector) + 
+    geom_line(data=austria, aes(x=date, y=Confirmed, size="5"))
+    
+```
+
+```{r}
+#selected countries
+ggplot() +
+    geom_line(data=filter(all, Country.Region %in% c("UK", "Austria", "Germany", "Italy", "Spain")), aes(x=date, y=Confirmed, group=Country.Region, colour=Country.Region))
+```
+
+```{r}
+#selected countries with time lag
+
+#Which is the first day with more than x cases
+cases <- 100
+
+#Set baseline country
+baseline <- min(which(filter(all, Country.Region=="Italy")$Confirmed > cases))
+
+#create new column with first day with >100 cases
+all <- all %>%
+  group_by(Country.Region) %>%
+  mutate(offset = min(which(Confirmed > cases))) %>%
+  ungroup()
+
+#make lagdates
+all <- all %>% 
+    mutate(lagdate=date-(offset-baseline))
+
+
+#plot
+ggplot() +
+    geom_line(data=filter(all, Country.Region %in% c("UK", "Austria", "Germany", "Italy", "Spain")), aes(x=lagdate, y=Confirmed, group=Country.Region, colour=Country.Region)) +
+  scale_y_log10()
+```
+
+
+```{r}
+#daily cases
+all <- all %>% 
+  group_by(Country.Region) %>% 
+  mutate(cases = Confirmed - lag(Confirmed)) %>% 
+  ungroup()
+
+#plot
+ggplot() +
+    geom_col(data=filter(all, Country.Region %in% c("Austria")), aes(x=date, y=cases, group=Country.Region))
+
+ggplot() +
+    geom_line(data=filter(all, Country.Region %in% c("UK", "Austria", "Germany", "Italy", "Spain")), aes(x=date, y=cases, group=Country.Region, colour=Country.Region))
+```
+
+```{r}
+#use the time series data
+
+
+```
+
+
+
+
+
+
+
+
+```{r}
+## Comments
+#"For line graphs, the data points must be grouped so that it knows which points to connect. In this case, it is simple -- all points should be connected, so group=1. When more variables are used and multiple lines are drawn, the grouping for lines is usually done by variable."
+```
+
