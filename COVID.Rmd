@@ -10,11 +10,13 @@ theme_set(theme_bw())
 
 
 ```{r}
+#create color palette for many categorical variables for line plots
 library(RColorBrewer)
 n <- 60
 qual_col_pals = brewer.pal.info[brewer.pal.info$category == 'qual',]
 col_vector = unlist(mapply(brewer.pal, qual_col_pals$maxcolors, rownames(qual_col_pals)))
-pie(rep(1,n), col=sample(col_vector, n))
+##To display run the following code:
+#pie(rep(1,n), col=sample(col_vector, n))
 ```
 
 
@@ -26,11 +28,11 @@ myfiles = lapply(temp, read.csv)
 
 #Time series
 setwd("/Users/Julian/Dropbox/Documents/GitHub/COVID-19/csse_covid_19_data/csse_covid_19_time_series")
-ts_conf <- read.csv("time_series_19-covid-Confirmed.csv")
-ts_deaths <- read.csv("time_series_19-covid-Deaths.csv")
-ts_recovered <- read.csv("time_series_19-covid-Recovered.csv")
-ts_conf_global <- read.csv("time_series_covid19_confirmed_global.csv")
-ts_conf_global <- read.csv("time_series_covid19_deaths_global.csv")
+ts_conf <- read.csv("time_series_19-covid-Confirmed.csv", stringsAsFactors = F)
+ts_deaths <- read.csv("time_series_19-covid-Deaths.csv", stringsAsFactors = F)
+ts_recovered <- read.csv("time_series_19-covid-Recovered.csv", stringsAsFactors = F)
+ts_conf_global <- read.csv("time_series_covid19_confirmed_global.csv", stringsAsFactors = F)
+ts_conf_global <- read.csv("time_series_covid19_deaths_global.csv", stringsAsFactors = F)
 ```
 
 
@@ -180,12 +182,43 @@ ggplot() +
     geom_line(data=filter(all, Country.Region %in% c("UK", "Austria", "Germany", "Italy", "Spain")), aes(x=date, y=cases, group=Country.Region, colour=Country.Region))
 ```
 
+
+
+
+
+## Using the time series data
 ```{r}
-#use the time series data
+#gather the time series data
+ts_conf_gathered <- gather(ts_conf[-c(1,3,4)], key = "date", value = "cases", -Country.Region)
+#fix date
+ts_conf_gathered$date <- str_sub(ts_conf_gathered$date, start = 2L)
+ts_conf_gathered$date <- mdy(ts_conf_gathered$date)
 
-
+#UK
+ts_conf$Country.Region[ts_conf$Country.Region=="United Kingdom" & ts_conf$Province.State=="United Kingdom"] <- "UK"
 ```
 
+
+```{r}
+#plot cumulative cases by country
+ggplot() +
+    geom_line(data=filter(ts_conf_gathered, Country.Region %in% c("United Kingdom", "Austria", "Germany", "Italy", "Spain")), aes(x=date, y=cases, group=Country.Region, colour=Country.Region))
+```
+
+```{r}
+#make new column with daily cases
+ts_conf_gathered <- ts_conf_gathered %>% 
+  group_by(Country.Region) %>% 
+  mutate(daily = cases - lag(cases)) %>% 
+  ungroup()
+
+#plot daily cases by country
+ggplot() +
+    geom_col(data=filter(ts_conf_gathered, Country.Region %in% c("Austria")), aes(x=date, y=daily, group=Country.Region))
+
+ggplot() +
+    geom_line(data=filter(ts_conf_gathered, Country.Region %in% c("UK", "Austria", "Germany", "Italy", "Spain")), aes(x=date, y=daily, group=Country.Region, colour=Country.Region))
+```
 
 
 
