@@ -1,0 +1,12 @@
+name: COVID_Dashboard
+title: COVID_Dashboard
+username:
+account: julian-matthewman
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 2049933
+bundleId: 2963998
+url: https://julian-matthewman.shinyapps.io/COVID_Dashboard/
+when: 1585915617.34921
+asMultiple: FALSE
+asStatic: FALSE
