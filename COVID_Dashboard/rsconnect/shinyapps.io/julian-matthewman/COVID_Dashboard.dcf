@@ -5,8 +5,8 @@ account: julian-matthewman
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 2049933
-bundleId: 2963998
+bundleId: 2972287
 url: https://julian-matthewman.shinyapps.io/COVID_Dashboard/
-when: 1585915617.34921
+when: 1586109997.07719
 asMultiple: FALSE
 asStatic: FALSE
