@@ -41,7 +41,7 @@ data$date <- mdy(data$date)
 #Remove overseas territories
 data <- data[data$State == "" | data$Country=="China" & data$State=="Hubei",]
 #Make list of countries that have more than 8000 cases
-high <- unique(data$Country[data$cases>8000])
+high <- unique(data$Country[data$cases>5000])
 
 ###Make new column with daily cases
 data <- data %>% 
@@ -104,8 +104,8 @@ ui <- dashboardPage(
                                         choices = c("cases", "deaths")),
                             sliderInput(inputId = "startdate", label = "Select Dates:",
                                         min = as.Date("2020-01-22","%Y-%m-%d"),
-                                        max = Sys.Date() - 2,
-                                        value=c(as.Date("2020-01-22"), as.Date(Sys.Date() - 2)),
+                                        max = Sys.Date() - 1,
+                                        value=c(as.Date("2020-01-22"), as.Date(Sys.Date() - 1)),
                                         timeFormat="%Y-%m-%d")
                             )
                         )
